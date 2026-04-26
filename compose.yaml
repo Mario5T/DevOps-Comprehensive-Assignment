@@ -1,70 +1,35 @@
-# Comments are provided throughout this file to help you get started.
-# If you need more help, visit the Docker Compose reference guide at
-# https://docs.docker.com/go/compose-spec-reference/
+# # syntax=docker/dockerfile:1
 
-# Here the instructions define your application as a service called "server".
-# This service is built from the Dockerfile in the current directory.
-# You can add other services your application may depend on here, such as a
-# database or a cache. For examples, see the Awesome Compose repository:
-# https://github.com/docker/awesome-compose
-version: "3.9"
-services:
-  mongodb:
-    image: mongo:7
-    container_name: mongodb
-    volumes:
-      - mongo_data:/data/db      # named volume → data persists after container removal
-    networks:
-      - app-network
-    restart: unless-stopped
+# # Comments are provided throughout this file to help you get started.
+# # If you need more help, visit the Dockerfile reference guide at
+# # https://docs.docker.com/go/dockerfile-reference/
 
-# The commented out section below is an example of how to define a PostgreSQL
-# database that your application can use. `depends_on` tells Docker Compose to
-# start the database before your application. The `db-data` volume persists the
-# database data between container restarts. The `db-password` secret is used
-# to set the database password. You must create `db/password.txt` and add
-# a password of your choosing to it before running `docker-compose up`.
-#     depends_on:
-#       db:
-#         condition: service_healthy
-#   db:
-#     image: postgres
-#     restart: always
-#     user: postgres
-#     secrets:
-#       - db-password
-#     volumes:
-#       - db-data:/var/lib/postgresql/data
-#     environment:
-#       - POSTGRES_DB=example
-#       - POSTGRES_PASSWORD_FILE=/run/secrets/db-password
-#     expose:
-#       - 5432
-#     healthcheck:
-#       test: [ "CMD", "pg_isready" ]
-#       interval: 10s
-#       timeout: 5s
-#       retries: 5
-# volumes:
-#   db-data:
-# secrets:
-#   db-password:
-#     file: db/password.txt
-  app:
-    build: .                     
-    container_name: app
-    ports:
-      - "80:5000"                
-    environment:
-      - MONGO_URI=mongodb://mongodb:27017/devopsdb
-      - PORT=5000
-    depends_on:
-      - mongodb
-    networks:
-      - app-network
-    restart: unless-stopped
-volumes:
-  mongo_data:  
-networks:
-  app-network:
-    driver: bridge
+# # Want to help us make this template better? Share your feedback here: https://forms.gle/ybq9Krt8jtBL3iCk7
+
+
+
+
+FROM node:20-alpine AS frontend-build
+
+WORKDIR /app/frontend
+
+COPY frontend/package*.json ./
+RUN npm install
+
+COPY frontend/ ./
+RUN npm run build
+
+FROM node:20-alpine
+
+WORKDIR /app/backend
+
+COPY backend/package*.json ./
+RUN npm install --omit=dev
+
+COPY backend/ ./
+
+COPY --from=frontend-build /app/frontend/dist /app/frontend/dist
+
+EXPOSE 5000
+
+CMD ["node", "server.js"]

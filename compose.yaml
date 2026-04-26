@@ -1,35 +1,43 @@
-# # syntax=docker/dockerfile:1
+# Comments are provided throughout this file to help you get started.
+# If you need more help, visit the Docker Compose reference guide at
+# https://docs.docker.com/go/compose-spec-reference/
 
-# # Comments are provided throughout this file to help you get started.
-# # If you need more help, visit the Dockerfile reference guide at
-# # https://docs.docker.com/go/dockerfile-reference/
+# Here the instructions define your application as a service called "server".
+# This service is built from the Dockerfile in the current directory.
+# You can add other services your application may depend on here, such as a
+# database or a cache. For examples, see the Awesome Compose repository:
+# https://github.com/docker/awesome-compose
 
-# # Want to help us make this template better? Share your feedback here: https://forms.gle/ybq9Krt8jtBL3iCk7
+version: "3.9"
 
+services:
+  mongodb:
+    image: mongo:7
+    container_name: mongodb
+    volumes:
+      - mongo_data:/data/db     
+    networks:
+      - app-network
+    restart: unless-stopped
 
+  app:
+    build: .                     
+    container_name: app
+    ports:
+      - "80:5000"                
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/devopsdb
+      - PORT=5000
+    depends_on:
+      - mongodb
+    networks:
+      - app-network
+    restart: unless-stopped
 
+volumes:
+  mongo_data:                   
 
-FROM node:20-alpine AS frontend-build
+networks:
+  app-network:
+    driver: bridge
 
-WORKDIR /app/frontend
-
-COPY frontend/package*.json ./
-RUN npm install
-
-COPY frontend/ ./
-RUN npm run build
-
-FROM node:20-alpine
-
-WORKDIR /app/backend
-
-COPY backend/package*.json ./
-RUN npm install --omit=dev
-
-COPY backend/ ./
-
-COPY --from=frontend-build /app/frontend/dist /app/frontend/dist
-
-EXPOSE 5000
-
-CMD ["node", "server.js"]
